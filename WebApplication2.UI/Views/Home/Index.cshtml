@@ -1,0 +1,88 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.8.1/slick.min.css" />
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.8.1/slick-theme.min.css" />
+<div class="row">
+    <div class="col-md-4">
+
+    </div>
+    <div class="col-md-4">
+        <h1>Arabalarımız</h1>
+    </div>
+    <div class="col-md-4">
+    </div>
+</div>
+
+
+
+<div class="row row-cols-1 row-cols-md-3 g-4" id="urunListesi">
+    
+</div>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.8.1/slick-theme.min.css" />
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.8.1/slick.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+@* <script src="~/jsajax/deneme.js"></script> *@
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        listele();
+    });
+
+    const baseurl = "http://localhost:1234/";
+    const gettoken = localStorage.getItem("token");
+
+    async function listele() {
+        try {
+            const response = await fetch(baseurl + "api/Car", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + gettoken
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log(data);
+
+            let html = "";
+            data.forEach(item => {
+                html += `
+                <div class="col-md-4 d-flex">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="slick-slider">
+                                <img src="${item.arabaResim}" class="card-img-top">
+                        </div>
+                        <div class="card-body">
+                                <h5 class="card-title">${item.arabaAdi}</h5>
+                                <p class="card-text">Araba Km : ${item.arabaKm}</p>
+                                <p class="card-text">Araba Modeli : ${item.arabaModel}</p>
+                                <p class="card-text">Yakıt Türü: ${item.arabaYakıtTürü}</p>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            document.getElementById("urunListesi").innerHTML = html;
+
+            $('.slick-slider').slick({
+                slidesToShow: 1,
+                slidesToScroll: 1,
+                autoplay: true,
+                autoplaySpeed: 2000,
+                dots: true,
+                arrows: false
+            });
+
+        } catch (error) {
+            console.error("Error: ", error);
+        }
+    }
+</script>

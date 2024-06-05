@@ -1,0 +1,132 @@
+﻿@{
+    Layout = "_admin";
+}
+
+<div class="container mt-5">
+    <h2>Marka Yönetim Sistemi</h2>
+    <div class="container my-3">
+        <h4>Yeni Marka Ekle </h4>
+        <form id="addBrandForm">
+            <input type="text" id="brandName" placeholder="Marka Adı Giriniz" class="form-control mb-2">
+            <button type="submit" class="btn btn-success">Marka Ekle</button>
+        </form>
+    </div>
+
+
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Marka Adı</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody id="brandTableBody">
+        </tbody>
+    </table>
+</div>
+
+
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var baseurl = "http://localhost:1234";
+            var gettoken = localStorage.getItem("token");
+
+            getBrands();
+
+            $('#addBrandForm').submit(function (e) {
+                e.preventDefault();
+                let brandName = $('#brandName').val();
+                $.ajax({
+                    url: baseurl + '/api/Brand',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ brandName: brandName }),
+                    headers: {
+                        "Authorization": "Bearer " + gettoken
+                    },
+                    success: function (brandDto) {
+                        alert("Brand added successfully");
+                        $('#brandName').val('');  // Clear the input field
+                        getBrands();  // Reload the list
+                    },
+                    error: function (response) {
+                        alert("Error adding brand: " + response.responseText);
+                    }
+                });
+            });
+
+            function getBrands() {
+                $.ajax({
+                    url: baseurl + '/api/Brand',
+                    type: 'GET',
+                    headers: {
+                        "Authorization": "Bearer " + gettoken
+                    },
+                    success: function (brands) {
+                        let tableBody = $('#brandTableBody');
+                        tableBody.empty();
+                        brands.forEach(function (brand) {
+                            tableBody.append(`
+                                        <tr>
+                                            <td>${brand.id}</td>
+                                            <td>${brand.brandName}</td>
+                                            <td>
+                                                <button data-id="${brand.id}" class="btn btn-danger delete-btn">Delete</button>
+                                                <button data-id="${brand.id}" class="btn btn-warning update-btn">Update</button>
+                                            </td>
+                                        </tr>
+                                    `);
+                        });
+                    }
+                });
+            }
+
+            
+            $('body').on('click', '.delete-btn', function () {
+                var id = $(this).data('id');
+                deleteBrand(id);
+            });
+
+            $('body').on('click', '.update-btn', function () {
+                var id = $(this).data('id');
+                updateBrand(id);
+            });
+
+            function deleteBrand(id) {
+                $.ajax({
+                    url: baseurl + `/api/Brand/${id}`,
+                    type: 'DELETE',
+                    headers: {
+                        "Authorization": "Bearer " + gettoken
+                    },
+                    success: function (result) {
+                        alert(result.message);
+                        getBrands();  // Reload the list
+                    }
+                });
+            }
+
+            function updateBrand(id) {
+                let brandName = prompt("Enter new brand name:");
+                $.ajax({
+                    url: baseurl + `/api/Brand`,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ id: id, brandName: brandName }),
+                    headers: {
+                        "Authorization": "Bearer " + gettoken
+                    },
+                    success: function (result) {
+                        alert("Brand updated successfully");
+                        getBrands();  // Reload the list
+                    }
+                });
+            }
+        });
+
+    </script>
+}

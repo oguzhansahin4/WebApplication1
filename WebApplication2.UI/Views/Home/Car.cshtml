@@ -1,0 +1,210 @@
+﻿@{
+    ViewData["Title"] = "Car";
+    Layout = "~/Views/Shared/_admin.cshtml";
+}
+
+
+
+
+<div class="container mt-5">
+    <h2>Araba Yönetim İşlemleri</h2>
+    <form id="carForm">
+        <input type="hidden" id="carId" />
+        <input type="text" id="carName" placeholder="Araba Adı" class="form-control mb-2" required>
+        <input type="text" id="carModel" placeholder="Araba Modeli" class="form-control mb-2" required>
+        <input type="text" id="carKm" placeholder="Araba Km" class="form-control mb-2" required>
+        <input type="text" id="carFuelType" placeholder="Araba Yakıt Türü" class="form-control mb-2" required>
+        <input type="file" id="carImage" class="form-control mb-2">
+        <select id="brandId" class="form-control mb-2" required>
+            <option value="">Marka Seçiniz</option>
+        </select>
+        <button type="submit" id="saveButton" class="btn btn-success">Kaydet</button>
+        <button type="button" id="updateButton" class="btn btn-warning" style="display: none;">Güncelle</button>
+    </form>
+    <hr>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Car Name</th>
+                <th>Model</th>
+                <th>Km</th>
+                <th>Fuel Type</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="carTableBody">
+        </tbody>
+    </table>
+</div>
+
+
+@section Scripts {
+    <script>
+
+        $(document).ready(function () {
+            loadBrands();
+            getCars();
+
+            var baseurl = "http://localhost:1234/api/Car";
+            var gettoken = localStorage.getItem("token");
+            loadBrands();
+
+            $('#carForm').submit(function (e) {
+                e.preventDefault();
+                gatherCarData().then(carData => {
+                    var method = carData.id ? 'PUT' : 'POST';
+                    console.log('Method chosen based on ID:', method); // Debug output to check method determination
+                    sendCarData(carData, method);
+                }).catch(error => {
+                    console.error('Error processing file', error);
+                    alert('Failed to process image');
+                });
+            });
+
+            $('#updateButton').click(function () {
+                gatherCarData().then(carData => {
+                    sendCarData(carData, 'PUT');
+                    console.log(carData);
+                }).catch(error => {
+                    console.error('Failed to load image', error);
+                });
+            });
+
+
+            function getCars() {
+                $.ajax({
+                    url: baseurl, // Endpoint for getting cars
+                    type: 'GET',
+                    headers: {
+                        "Authorization": "Bearer " + gettoken
+                    },
+                    success: function (cars) {
+                        let tableBody = $('#carTableBody');
+                        tableBody.empty(); // Clear the table body to prevent duplication
+                        cars.forEach(function (car) { // Iterate through each car and append it to the table
+                            tableBody.append(`
+                            <tr>
+                                <td>${car.id}</td>
+                                <td>${car.arabaAdi}</td>
+                                <td>${car.arabaModel}</td>
+                                <td>${car.arabaKm}</td>
+                                <td>${car.arabaYakıtTürü}</td>
+                                <td>
+                                    <button onclick="editCar(${car.id})" class="btn btn-warning">Düzenle</button>
+                                    <button onclick="deleteCar(${car.id})" class="btn btn-danger">Sil</button>
+                                </td>
+                            </tr>
+                        `);
+                        });
+                    },
+                    error: function (error) {
+                        console.error('Error fetching cars:', error);
+                        alert('Error fetching cars');
+                    }
+                });
+            }
+            function gatherCarData() {
+                return new Promise((resolve, reject) => {
+                    var file = $('#carImage').get(0).files[0];
+                    if (file) {
+                        var reader = new FileReader();
+                        reader.onload = function (e) {
+                            resolve(completeCarData(e.target.result)); // Resolve promise with the image data
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    } else {
+                        resolve(completeCarData('')); // Resolve with empty string if no file is chosen
+                    }
+                });
+            }
+
+
+            function completeCarData(imageData) {
+                var id = $('#carId').val() ? parseInt($('#carId').val()) : null;
+                console.log("Form ID: ", id); // Debug to see what ID is being captured
+
+                return {
+                    id: id,
+                    arabaAdi: $('#carName').val(),
+                    arabaModel: $('#carModel').val(),
+                    arabaKm: $('#carKm').val(),
+                    arabaYakıtTürü: $('#carFuelType').val(),
+                    brandId: parseInt($('#brandId').val()),
+                    arabaResim: imageData
+                };
+            }
+
+            function sendCarData(carData, method) {
+                console.log('Sending Data:', JSON.stringify(carData));
+                $.ajax({
+                    url: baseurl, // Use the same base URL for POST and PUT
+                    type: method,
+                    contentType: 'application/json',
+                    data: JSON.stringify(carData),
+                    headers: {
+                        "Authorization": "Bearer " + gettoken
+                    },
+                    success: function (result) {
+                        alert('Car ' + (method === 'PUT' ? 'updated' : 'added') + ' successfully');
+                        resetForm(); // Reset the form and reinitialize state
+                        getCars();  // Reload the list
+                    },
+                    error: function (response) {
+                        alert('Error: ' + response.responseText);
+                        console.error('Error Response:', response);
+                    }
+                });
+            }
+
+            function resetForm() {
+                $('#carForm')[0].reset();
+                $('#updateButton').hide();
+                $('#saveButton').show();
+            }
+
+            getCars();
+
+            function loadBrands() {
+                $.ajax({
+                    url: 'http://localhost:1234/api/Brand',
+                    type: 'GET',
+                    headers: {
+                        "Authorization": "Bearer " + gettoken
+                    },
+                    success: function (brands) {
+                        var brandSelect = $('#brandId');
+                        brandSelect.empty().append('<option value="">Select a brand</option>');
+                        brands.forEach(function (brand) {
+                            brandSelect.append(`<option value="${brand.id}">${brand.brandName}</option>`);
+                        });
+                    }
+                });
+            }
+
+            window.editCar = function (id) {
+                $.ajax({
+                    url: baseurl + '/' + id,
+                    type: 'GET',
+                    headers: {
+                        "Authorization": "Bearer " + gettoken
+                    },
+                    success: function (car) {
+                        $('#carId').val(car.id);
+                        $('#carName').val(car.arabaAdi);
+                        $('#carModel').val(car.arabaModel);
+                        $('#carKm').val(car.arabaKm);
+                        $('#carFuelType').val(car.arabaYakıtTürü);
+                        $('#brandId').val(car.brandId);
+                        $('#updateButton').show(); // Show the update button
+                        $('#saveButton').hide(); // Hide the save button
+                    }
+                });
+            };
+        });
+
+    </script>
+
+
+}
